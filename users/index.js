@@ -18,17 +18,22 @@ router.get("/", async (req, res) => {
     res.send("Unauthorized");
   }
 });
-router.get("/me", async (req, res) => {
-  const [username, password] = atob(
-    req.headers.authorization.split(" ")[1]
-  ).split(":");
-  const user = await userModel.find({ username });
-  const isAuthorized = await bcrypt.compare(password, user[0].password);
-
-  if (isAuthorized) {
-    res.send("login sucessfull");
-  } else {
-    res.status(403).send("login failed");
+router.post("/addToFavs", async (req, res) => {
+  try {
+    console.log(req.cookies.accessToken);
+    console.log(req.body.place);
+    // const token = req.headers.authorization.split(" ")[1];
+    const token = req.cookies.accessToken;
+    const decoded = await jwt.verify(token, process.env.SECRET_KEY);
+    const user = await userModel.findById(decoded.id);
+    const favs = user.favorites;
+    favs.push(req.body.place);
+    console.log(favs);
+    await userModel.findByIdAndUpdate(decoded.id, { favorites: favs });
+    res.send("added");
+  } catch (error) {
+    console.log(error);
+    res.status(401).send("Token expired");
   }
 });
 router.post("/register", async (req, res) => {
@@ -52,11 +57,14 @@ router.post("/login", async (req, res) => {
   console.log(isAuthorized);
   if (isAuthorized) {
     const secretkey = process.env.SECRET_KEY;
-    const payload = { ...req.body, id: user._id };
-    const token = await jwt.sign(payload, secretkey, { expiresIn: "15m" });
-    res.cookie("accessToken", token, { httpOnly: true });
-    // res.status(200).redirect("http://localhost:3000/home");
+    const payload = { id: user._id };
+    const token = await jwt.sign(payload, secretkey, { expiresIn: "1 week" });
+    console.log(token);
+    res.cookie("accessToken", token, {
+      httpOnly: true,
+    });
     res.send("ok");
+    // res.status(200).redirect("http://localhost:3000/home");
   } else {
     res.send("Invalid credentials");
   }

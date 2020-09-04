@@ -21,10 +21,6 @@ const userSchema = new Schema({
     required: true,
   },
   favorites: Array,
-  role: {
-    type: String,
-    enum: ["admin", "user"],
-  },
 });
 
 const userModel = model("user", userSchema);
